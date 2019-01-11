@@ -93,6 +93,7 @@ import {
     Color,
     ColorInformation,
     ColorPresentation,
+    OSType,
 } from './types-impl';
 import { SymbolKind } from '../api/model';
 import { EditorsAndDocumentsExtImpl } from './editors-and-documents';
@@ -409,7 +410,11 @@ export function createAPIFactory(
             },
             getQueryParameters(): QueryParameters {
                 return envExt.getQueryParameters();
+            },
+            getOsType(): PromiseLike<theia.OSType> {
+                return envExt.getOsType();
             }
+
         };
 
         const languageServer: typeof theia.languageServer = {
@@ -653,6 +658,7 @@ export function createAPIFactory(
             ColorPresentation,
             FoldingRange,
             FoldingRangeKind,
+            OSType
         };
     };
 }
