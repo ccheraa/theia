@@ -16,11 +16,12 @@
 
 // tslint:disable:no-any
 import URI from '@theia/core/lib/common/uri';
+import { CommandService } from '@theia/core';
 import { EditorPreferenceChange, EditorPreferences, TextEditor, DiffNavigator } from '@theia/editor/lib/browser';
 import { DiffUris } from '@theia/core/lib/browser/diff-uris';
 import { inject, injectable } from 'inversify';
 import { DisposableCollection } from '@theia/core/lib/common';
-import { MonacoToProtocolConverter, ProtocolToMonacoConverter } from 'monaco-languageclient';
+import { MonacoToProtocolConverter, ProtocolToMonacoConverter, TextDocumentSaveReason } from 'monaco-languageclient';
 import { MonacoCommandServiceFactory } from './monaco-command-service';
 import { MonacoContextMenuService } from './monaco-context-menu';
 import { MonacoDiffEditor } from './monaco-diff-editor';
@@ -40,6 +41,9 @@ export class MonacoEditorProvider {
 
     @inject(MonacoBulkEditService)
     protected readonly bulkEditService: MonacoBulkEditService;
+
+    @inject(CommandService)
+    protected readonly commandService: CommandService;
 
     constructor(
         @inject(MonacoEditorService) protected readonly codeEditorService: MonacoEditorService,
@@ -101,6 +105,16 @@ export class MonacoEditorProvider {
         const options = this.createMonacoEditorOptions(model);
         const editor = new MonacoEditor(uri, model, document.createElement('div'), this.m2p, this.p2m, options, override);
         toDispose.push(this.editorPreferences.onPreferenceChanged(event => this.updateMonacoEditorOptions(editor, event)));
+
+        editor.document.onWillSaveModel(event => {
+            event.waitUntil(new Promise<monaco.editor.IIdentifiedSingleEditOperation[]>(async resolve => {
+                if (event.reason === TextDocumentSaveReason.Manual && this.editorPreferences['editor.formatOnSave']) {
+                    await this.commandService.executeCommand('monaco.editor.action.formatDocument');
+                }
+                resolve([]);
+            }));
+        });
+
         return editor;
     }
     protected createMonacoEditorOptions(model: MonacoEditorModel): MonacoEditor.IOptions {
